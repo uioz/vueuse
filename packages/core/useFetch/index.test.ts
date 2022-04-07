@@ -263,4 +263,10 @@ describe('useFetch', () => {
     expect(data.value).toEqual(jsonMessage)
     expect(fetchSpy).toBeCalledTimes(1)
   })
+
+  test('should await when setting the request method', async() => {
+    const { data } = await useFetch(jsonUrl).post().text()
+
+    await retry(() => expect(data.value).toEqual(JSON.stringify(jsonMessage)))
+  })
 })

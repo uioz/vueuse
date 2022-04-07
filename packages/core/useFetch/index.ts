@@ -457,6 +457,15 @@ export function useFetch<T>(url: MaybeRef<string>, ...args: any[]): UseFetchRetu
     formData: setType('formData'),
   }
 
+  const promiseLikeShell = {
+    ...shell,
+    then(onFulfilled: any, onRejected: any) {
+      return until(isFinished).toBe(true)
+        .then(() => onFulfilled(shell))
+        .catch(error => onRejected(error))
+    },
+  }
+
   function setMethod(method: HttpMethod) {
     return (payload?: unknown, payloadType?: string) => {
       if (!isFetching.value) {
@@ -481,31 +490,17 @@ export function useFetch<T>(url: MaybeRef<string>, ...args: any[]): UseFetchRetu
         if (!payloadType && unref(payload) && Object.getPrototypeOf(unref(payload)) === Object.prototype)
           config.payloadType = 'json'
 
-        return shell as any
+        return promiseLikeShell as any
       }
       return undefined
     }
   }
 
-  function waitUntilFinished() {
-    return new Promise<UseFetchReturn<T>>((resolve, reject) => {
-      until(isFinished).toBe(true)
-        .then(() => resolve(shell))
-        .catch(error => reject(error))
-    })
-  }
-
-  function setType(type: DataType) {
+  function setType<T extends DataType>(type: T) {
     return () => {
       if (!isFetching.value) {
         config.type = type
-        return {
-          ...shell,
-          then(onFulfilled: any, onRejected: any) {
-            return waitUntilFinished()
-              .then(onFulfilled, onRejected)
-          },
-        } as any
+        return promiseLikeShell as any
       }
       return undefined
     }
@@ -514,13 +509,7 @@ export function useFetch<T>(url: MaybeRef<string>, ...args: any[]): UseFetchRetu
   if (options.immediate)
     setTimeout(execute, 0)
 
-  return {
-    ...shell,
-    then(onFulfilled, onRejected) {
-      return waitUntilFinished()
-        .then(onFulfilled, onRejected)
-    },
-  }
+  return promiseLikeShell
 }
 
 function joinPaths(start: string, end: string): string {
